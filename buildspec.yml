@@ -1,0 +1,34 @@
+version: 0.2
+
+env:
+  variables:
+    CONFIGURATION: "Release"
+    PUBLISH_DIR: "output"
+
+phases:
+  install:
+    commands:
+      - echo "Downloading .NET 8 SDK..."
+      - powershell -Command "Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1"
+      - powershell -File dotnet-install.ps1 -Version 8.0.100
+      - setx PATH "%PATH%;%ProgramFiles%\\dotnet"
+      - refreshenv || ver > nul
+      - dotnet --info
+      - echo "Restoring packages..."
+      - dotnet restore
+  build:
+    commands:
+      - echo "Building solution..."
+      - dotnet build -c %CONFIGURATION% --no-restore
+  post_build:
+    commands:
+      - echo "Running tests if present..."
+      - for /f "delims=" %%p in ('dir /s /b *Tests.csproj 2^>nul') do ( dotnet test "%%p" -c %CONFIGURATION% --no-build --logger "trx" )
+      - echo "Publishing web projects..."
+      - for /f "delims=" %%w in ('powershell -NoProfile -Command "Get-ChildItem -Recurse -Filter *.csproj | Select-String -Pattern ''Microsoft.NET.Sdk.Web'' | ForEach-Object { $_.Path }"') do ( ^
+          echo Publishing %%w & dotnet publish "%%w" -c %CONFIGURATION% -o "%PUBLISH_DIR%\\%%~nw" ^
+        )
+artifacts:
+  base-directory: output
+  files:
+    - '**/*'
