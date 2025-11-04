@@ -10,7 +10,7 @@ phases:
     commands:
       - 'Write-Host "Installing .NET 8 SDK..."'
       - 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest ''https://dot.net/v1/dotnet-install.ps1'' -OutFile dotnet-install.ps1"'
-      - 'powershell -NoProfile -ExecutionPolicy Bypass -File .\dotnet-install.ps1 -Version 8.0.100 -InstallDir C:\dotnet'
+      - 'powershell -NoProfile -ExecutionPolicy Bypass -File .\dotnet-install.ps1 -Version 8.0.405 -InstallDir C:\dotnet'
       - '$env:PATH = ''C:\dotnet;'' + $env:PATH'
       - '& ''C:\dotnet\dotnet.exe'' --info'
       - 'Write-Host "Restoring packages..."'
