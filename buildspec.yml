@@ -4,34 +4,31 @@ env:
   variables:
     CONFIGURATION: "Release"
     PUBLISH_DIR: "output"
-    DOTNET_DIR: "C:\\dotnet"
 
 phases:
   install:
     commands:
-      - 'Write-Host "Installing .NET 8 SDK..."'
-      - '$ErrorActionPreference = "Stop"'
-      - '$env:DOTNET_DIR = "C:\dotnet"'
-      - 'Invoke-WebRequest "https://dot.net/v1/dotnet-install.ps1" -OutFile dotnet-install.ps1'
-      - 'powershell -NoProfile -ExecutionPolicy Bypass -File .\dotnet-install.ps1 -Version 8.0.100 -InstallDir $env:DOTNET_DIR'
-      - '$env:PATH = "$env:DOTNET_DIR;$env:PATH"'
-      - '& "$env:DOTNET_DIR\dotnet.exe" --info'
-      - 'Write-Host "Restoring packages..."'
-      - '& "$env:DOTNET_DIR\dotnet.exe" restore'
+      - Write-Host "Installing .NET 8 SDK..."
+      - powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile dotnet-install.ps1"
+      - powershell -NoProfile -ExecutionPolicy Bypass -File .\dotnet-install.ps1 -Version 8.0.100 -InstallDir 'C:\dotnet'
+      - $env:PATH = 'C:\dotnet;' + $env:PATH
+      - & 'C:\dotnet\dotnet.exe' --info
+      - Write-Host "Restoring packages..."
+      - & 'C:\dotnet\dotnet.exe' restore
   build:
     commands:
-      - 'Write-Host "Building..."'
-      - '& "$env:DOTNET_DIR\dotnet.exe" build -c $env:CONFIGURATION --no-restore'
+      - Write-Host "Building..."
+      - & 'C:\dotnet\dotnet.exe' build -c $env:CONFIGURATION --no-restore
   post_build:
     commands:
-      - 'Write-Host "Publishing web projects..."'
+      - Write-Host "Publishing web projects..."
       - |
-        $pubRoot = "$env:PUBLISH_DIR"
+        $pubRoot = Join-Path (Get-Location) $env:PUBLISH_DIR
         New-Item -ItemType Directory -Force -Path $pubRoot | Out-Null
         Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
           if (Select-String -Path $_.FullName -Pattern 'Microsoft.NET.Sdk.Web' -Quiet) {
             Write-Host "Publishing $($_.FullName)"
-            & "$env:DOTNET_DIR\dotnet.exe" publish $_.FullName -c $env:CONFIGURATION -o (Join-Path $pubRoot $_.BaseName)
+            & 'C:\dotnet\dotnet.exe' publish $_.FullName -c $env:CONFIGURATION -o (Join-Path $pubRoot $_.BaseName)
           }
         }
 artifacts:
