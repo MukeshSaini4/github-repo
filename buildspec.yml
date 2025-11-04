@@ -9,24 +9,28 @@ env:
 phases:
   install:
     commands:
-      - echo "Installing .NET 8 SDK to %DOTNET_DIR% ..."
-      - powershell -Command "Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1"
-      - powershell -File dotnet-install.ps1 -Version 8.0.100 -InstallDir '%DOTNET_DIR%'
-      - setx DOTNET_ROOT %DOTNET_DIR%
-      - set PATH=%PATH%;%DOTNET_DIR%
-      - "%DOTNET_DIR%\\dotnet.exe --info"
+      - echo "Installing .NET 8 SDK..."
+      - $env:DOTNET_DIR = "C:\dotnet"
+      - Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
+      - powershell -NoProfile -ExecutionPolicy Bypass -File .\dotnet-install.ps1 -Version 8.0.100 -InstallDir $env:DOTNET_DIR
+      - $env:PATH = "$env:DOTNET_DIR;$env:PATH"
+      - & "$env:DOTNET_DIR\dotnet.exe" --info
       - echo "Restoring packages..."
-      - "%DOTNET_DIR%\\dotnet.exe restore"
+      - & "$env:DOTNET_DIR\dotnet.exe" restore
   build:
     commands:
       - echo "Building..."
-      - "%DOTNET_DIR%\\dotnet.exe build -c %CONFIGURATION% --no-restore"
+      - & "$env:DOTNET_DIR\dotnet.exe" build -c $env:CONFIGURATION --no-restore
   post_build:
     commands:
       - echo "Publishing web projects..."
-      - for /f "delims=" %%w in ('powershell -NoProfile -Command "Get-ChildItem -Recurse -Filter *.csproj | Select-String -Pattern ''Microsoft.NET.Sdk.Web'' | ForEach-Object { $_.Path }"') do ( ^
-          echo Publishing %%w & "%DOTNET_DIR%\\dotnet.exe" publish "%%w" -c %CONFIGURATION% -o "%PUBLISH_DIR%\\%%~nw" ^
-        )
+      - |
+        Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
+          if (Select-String -Path $_.FullName -Pattern 'Microsoft.NET.Sdk.Web' -Quiet) {
+            Write-Host "Publishing $($_.FullName)"
+            & "$env:DOTNET_DIR\dotnet.exe" publish $_.FullName -c $env:CONFIGURATION -o "$env:PUBLISH_DIR\$($_.BaseName)"
+          }
+        }
 artifacts:
   base-directory: output
   files:
